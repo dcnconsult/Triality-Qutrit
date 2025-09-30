@@ -24,7 +24,7 @@ def lorentzian(x, x0, fwhm):
 
 def synthesize(csv_out: str | Path, steps=41, P_ge_range=(-60.0,-10.0), P_ef_range=(-60.0,-10.0), cfg: HotspotCfg = HotspotCfg(), randomize_phases: bool = False, pump_detuning_MHz: float = 0.0):
     P_ge_vals = np.linspace(P_ge_range[0], P_ge_range[1], steps)
-    P_ef_vals = np.linspace(P_ef_range[0], P_ef_range[1], steps)
+    P_ef_vals = np.linspace(P_ge_range[0], P_ef_range[1], steps)
     ge_grid, ef_grid = np.meshgrid(P_ge_vals, P_ef_vals, indexing='ij')
     
     detuning_suppression = lorentzian(pump_detuning_MHz, 0, cfg.detuning_linewidth_MHz)
@@ -56,16 +56,13 @@ def synthesize(csv_out: str | Path, steps=41, P_ge_range=(-60.0,-10.0), P_ef_ran
             if randomize_phases:
                 phi_ge, phi_ef, phi_gf = rng.uniform(0, 2 * np.pi, 3)
 
-            # Placeholder Tomography Data
             is_peak_region = np.linalg.norm([P_ge - cfg.center_dBm[0], P_ef - cfg.center_dBm[1]]) < np.mean(cfg.width_dB)
-            tomo_fidelity = 0.0
-            pop_g, pop_e, pop_f, pop_h = 0.25, 0.25, 0.25, 0.25 # Default equi-population
+            tomo_fidelity = 0.80
+            pop_g, pop_e, pop_f, pop_h = 0.25, 0.25, 0.25, 0.25
             
             if is_hotspot_active and is_peak_region:
-                tomo_fidelity = 0.95 # Higher fidelity in the hotspot
-                pop_g, pop_e, pop_f, pop_h = 0.1, 0.4, 0.4, 0.1 # Example populations in hotspot
-            else:
-                tomo_fidelity = 0.80 # Lower fidelity elsewhere
+                tomo_fidelity = 0.95
+                pop_g, pop_e, pop_f, pop_h = 0.1, 0.4, 0.4, 0.1
             
             notes = []
             if randomize_phases: notes.append("Randomized Phases")
@@ -83,6 +80,38 @@ def synthesize(csv_out: str | Path, steps=41, P_ge_range=(-60.0,-10.0), P_ef_ran
                 pop_g=pop_g, pop_e=pop_e, pop_f=pop_f, pop_h=pop_h,
             ))
     df = pd.DataFrame(rows)
+    Path(csv_out).parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(csv_out, index=False)
+    return df
+
+def synthesize_timeseries(csv_out: str | Path, fs: float = 2.5e9, duration_s: float = 1e-5, is_coherent: bool = True):
+    """Generates a timeseries with triad frequencies for bicoherence analysis."""
+    n_samples = int(fs * duration_s)
+    t = np.linspace(0, duration_s, n_samples, endpoint=False)
+    
+    f_ge = 0.52e9  # Using lower freqs for clearer bicoherence plot at this fs
+    f_ef = 0.49e9
+    f_gf = f_ge + f_ef
+
+    rng = np.random.default_rng()
+    if is_coherent:
+        # Phase-locked triad
+        phase_ge, phase_ef = rng.uniform(0, 2*np.pi, 2)
+        phase_gf = phase_ge + phase_ef 
+    else:
+        # Random phases
+        phase_ge, phase_ef, phase_gf = rng.uniform(0, 2*np.pi, 3)
+
+    sig_ge = np.cos(2 * np.pi * f_ge * t + phase_ge)
+    sig_ef = np.cos(2 * np.pi * f_ef * t + phase_ef)
+    sig_gf = np.cos(2 * np.pi * f_gf * t + phase_gf)
+    
+    noise = np.random.normal(0, 0.5, n_samples)
+    
+    # The sum frequency f_gf will only be present if the triad is coherent
+    signal = sig_ge + sig_ef + (sig_gf if is_coherent else 0) + noise
+
+    df = pd.DataFrame({'t_s': t, 'x': signal})
     Path(csv_out).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_out, index=False)
     return df
