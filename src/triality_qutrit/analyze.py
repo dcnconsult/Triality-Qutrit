@@ -4,9 +4,41 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from .io import load_csv
-from .plotting import heatmap, side_by_side_heatmap, plot_detuning_sweep
+from .plotting import heatmap, side_by_side_heatmap, plot_detuning_sweep, plot_tomo_panel
 from .stats import spatial_signal_to_noise, hotspot_peak, symmetry_distance, bootstrap_hotspot, symmetry_line_p_test
 from .simulate import synthesize
+
+def extract_tomo_data(df: pd.DataFrame, peak_coords: dict, control_coords: dict = None):
+    """Extracts tomography data for peak and control points."""
+    peak_row = df[
+        (np.isclose(df['P_ge_dBm'], peak_coords['peak_P_ge'])) &
+        (np.isclose(df['P_ef_dBm'], peak_coords['peak_P_ef']))
+    ].iloc[0]
+
+    if control_coords is None:
+        # Define a default control region far from the peak
+        control_row = df.iloc[0]
+    else:
+        # This part would be used for real data where a specific control point is measured
+        control_row = df[
+            (np.isclose(df['P_ge_dBm'], control_coords['P_ge_dBm'])) &
+            (np.isclose(df['P_ef_dBm'], control_coords['P_ef_dBm']))
+        ].iloc[0]
+
+    results = {
+        'peak': {
+            'fidelity': peak_row['tomo_fidelity'], 'purity': peak_row['tomo_purity'],
+            'pop_g': peak_row['pop_g'], 'pop_e': peak_row['pop_e'],
+            'pop_f': peak_row['pop_f'], 'pop_h': peak_row['pop_h']
+        },
+        'control': {
+            'fidelity': control_row['tomo_fidelity'], 'purity': control_row['tomo_purity'],
+            'pop_g': control_row['pop_g'], 'pop_e': control_row['pop_e'],
+            'pop_f': control_row['pop_f'], 'pop_h': control_row['pop_h']
+        }
+    }
+    return results
+
 
 def run_analysis(df: pd.DataFrame, outdir: Path, n_boot=500, n_perm=1000):
     """Runs the full analysis suite on a given dataframe and saves the outputs."""
@@ -15,6 +47,13 @@ def run_analysis(df: pd.DataFrame, outdir: Path, n_boot=500, n_perm=1000):
     stats = spatial_signal_to_noise(df)
     peak = hotspot_peak(df)
     sym = symmetry_distance(df)
+
+    # Tomography analysis
+    if all(k in df.columns for k in ['tomo_fidelity', 'pop_g']):
+        tomo_results = extract_tomo_data(df, peak)
+        plot_tomo_panel(tomo_results, out=outdir / 'tomo_panel.png')
+    else:
+        tomo_results = None
 
     boot_df, boot_sum = bootstrap_hotspot(df, n_boot=n_boot, frac=0.8)
     boot_df.to_csv(outdir/'bootstrap_peaks.csv', index=False)
@@ -33,6 +72,12 @@ def run_analysis(df: pd.DataFrame, outdir: Path, n_boot=500, n_perm=1000):
         "Bootstrap mean peak value": f"{boot_sum['mu_peak']:.2f}±{boot_sum['sd_peak']:.2f} ns",
         "Symmetry-line p-value": f"{sym_p['p_value']:.4g} (d_obs={sym_p['d_obs']:.3f}, null μ={sym_p['d_null_mean']:.3f}±{sym_p['d_null_std']:.3f}, n={sym_p['n_perm']})"
     }
+    
+    if tomo_results:
+        summary["Tomo Fidelity (Peak)"] = f"{tomo_results['peak']['fidelity']:.3f}"
+        summary["Tomo Fidelity (Control)"] = f"{tomo_results['control']['fidelity']:.3f}"
+        summary["Leakage |h> (Peak)"] = f"{tomo_results['peak']['pop_h']:.3f}"
+
     return summary
 
 def main():
@@ -47,7 +92,6 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
 
     if args.run_phase_control:
-        # Generate and analyze datasets for phase control
         df_hotspot = synthesize(outdir / 'triad_sweep_hotspot.csv', randomize_phases=False)
         df_control = synthesize(outdir / 'triad_sweep_control.csv', randomize_phases=True)
         side_by_side_heatmap(df_hotspot, df_control, out=outdir / 'Gate4_PhaseRandomization.png',
@@ -62,7 +106,6 @@ def main():
             for key, val in summary_control.items(): f.write(f"{key}: {val}\n")
 
     elif args.run_detuning_sweep:
-        # Perform the detuning sweep
         detunings = np.linspace(-10, 10, 21)
         results = []
         for detuning in detunings:
@@ -76,13 +119,16 @@ def main():
         plot_detuning_sweep(results_df, out=outdir / 'detuning_response.png')
 
     else:
-        # Standard analysis on a single file
         if not args.data:
-            raise ValueError("--data argument is required for standard analysis.")
-        df = load_csv(args.data)
+            df = synthesize(outdir / 'triad_sweep.csv')
+            print("No data file provided, running with synthetic data.")
+        else:
+            df = load_csv(args.data)
+        
         summary = run_analysis(df, outdir / 'analysis')
         with open(outdir / 'summary.txt', 'w', encoding='utf-8') as f:
-            for key, val in summary.items(): f.write(f"{key}: {val}\n")
+            for key, val in summary.items():
+                f.write(f"{key}: {val}\n")
 
     print('Analysis complete. See', outdir)
 

@@ -103,6 +103,36 @@
       "name": "notes",
       "type": "string",
       "required": false
+    },
+    {
+      "name": "tomo_fidelity",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "tomo_purity",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "pop_g",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "pop_e",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "pop_f",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "pop_h",
+      "type": "number",
+      "required": false
     }
   ]
 }
