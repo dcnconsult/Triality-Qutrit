@@ -76,3 +76,18 @@ See `data/schema/dataset_schema.json` for full validation.
 - Use `src/triality_qutrit/optimize.py` to switch to bandit/BO for faster hotspot discovery.
 
 **This is a research scaffold, not medical/mission-critical software.**
+
+## New: WebPlotDigitizer Import + Bispectrum CLI
+
+### WebPlotDigitizer → schema
+```bash
+python -m triality_qutrit.digitize --in data/external/my_wpd.csv   --config config/webplotdigitizer.template.yaml   --out data/external/transmon_ingest.csv   --meta config/meta.transmon_example.yaml
+
+python -m triality_qutrit.analyze --data data/external/transmon_ingest.csv --out out/transmon/
+```
+
+### Bispectrum / Bicoherence
+```bash
+python -m triality_qutrit.bispec --in data/external/jj_timeseries.csv --fs 2.5e9 --outdir out/bispec
+```
+Artifacts: `bicoherence.npy`, `freqs.npy`, `bicoherence_peaks.csv`, `bicoherence.png`.

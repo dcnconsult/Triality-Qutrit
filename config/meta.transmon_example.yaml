@@ -1,0 +1,15 @@
+batch_id: "autler_townes_stirap_reanalysis"
+timestamp: ""
+f_ge_Hz: 5.20e9
+f_ef_Hz: 4.90e9
+f_gf_Hz: 1.01e10
+P_pump_dBm: 0.0
+phi_ge_rad: 0.0
+phi_ef_rad: 0.0
+phi_gf_rad: 0.0
+T1_ns: 0.0
+contrast: 0.0
+temp_mK: 15.0
+fridge_cycle_id: "lit_reanalysis"
+resonator_Q: 8000.0
+notes: "Imported from literature figure via WebPlotDigitizer"
