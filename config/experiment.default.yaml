@@ -1,0 +1,26 @@
+meta:
+  project: Triality Qutrit Hotspot
+  created: 2025-09-30T15:58:03.538284
+instrument:
+  f_ge_Hz: 5.2e9
+  f_ef_Hz: 4.9e9
+  f_gf_Hz: 1.01e10   # intentionally near sum
+  P_pump_dBm: 0.0    # high pump level, relative reference
+  phases_rad:
+    phi_ge: 0.0
+    phi_ef: 0.0
+    phi_gf: 0.0
+sweep:
+  P_ge_range_dBm: [-60.0, -10.0]
+  P_ef_range_dBm: [-60.0, -10.0]
+  steps: 41
+ramsey:
+  base_T2star_ns: 120.0
+  noise_sigma_ns: 8.0
+  hotspot:
+    center_dBm: [-46.0, -43.0]   # asymmetric region (weak-weak)
+    amplitude_ns: 80.0           # additive improvement in T2*
+    width_dB: [5.5, 6.0]         # Gaussian widths in dB
+controls:
+  shuffle_labels_test: true
+  randomize_phases_control: true

@@ -1,0 +1,108 @@
+{
+  "description": "Schema for triad resonance spectroscopy qutrit sweep",
+  "primary_key": [
+    "run_id"
+  ],
+  "columns": [
+    {
+      "name": "run_id",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "batch_id",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "timestamp",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "f_ge_Hz",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "f_ef_Hz",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "f_gf_Hz",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "P_pump_dBm",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "P_ge_dBm",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "P_ef_dBm",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "phi_ge_rad",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "phi_ef_rad",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "phi_gf_rad",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "T2star_ns",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "T1_ns",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "contrast",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "fit_ok",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "temp_mK",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "fridge_cycle_id",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "resonator_Q",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "notes",
+      "type": "string",
+      "required": false
+    }
+  ]
+}

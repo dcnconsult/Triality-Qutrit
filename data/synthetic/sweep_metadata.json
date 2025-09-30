@@ -1,0 +1,29 @@
+{
+  "f_ge_Hz": 5200000000.0,
+  "f_ef_Hz": 4900000000.0,
+  "f_gf_Hz": 10100000000.0,
+  "P_pump_dBm": 0.0,
+  "phi_ge": 0.0,
+  "phi_ef": 0.0,
+  "phi_gf": 0.0,
+  "steps": 41,
+  "P_ge_range": [
+    -60.0,
+    -10.0
+  ],
+  "P_ef_range": [
+    -60.0,
+    -10.0
+  ],
+  "base_T2star_ns": 120.0,
+  "noise_sigma_ns": 8.0,
+  "hotspot_center": [
+    -46.0,
+    -43.0
+  ],
+  "hotspot_amp": 80.0,
+  "hotspot_width": [
+    5.5,
+    6.0
+  ]
+}
