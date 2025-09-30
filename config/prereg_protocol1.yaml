@@ -1,0 +1,15 @@
+protocol: "Protocol 1 — SPAM Validation (Qutrits, GHZ)"
+endpoints:
+  - name: fidelity_proxy
+    statistic: "median with 95% bootstrap CI"
+    threshold: ">= 0.90"
+  - name: leakage
+    statistic: "mean leakage across settings"
+    threshold: "<= 0.05"
+resampling:
+  bootstraps: 1000
+  shots_per_setting: 4096
+report:
+  emit_pdf: true
+  include_raw_tables: true
+version: "v1.0"

@@ -91,3 +91,5 @@ python -m triality_qutrit.analyze --data data/external/transmon_ingest.csv --out
 python -m triality_qutrit.bispec --in data/external/jj_timeseries.csv --fs 2.5e9 --outdir out/bispec
 ```
 Artifacts: `bicoherence.npy`, `freqs.npy`, `bicoherence_peaks.csv`, `bicoherence.png`.
+
+## Phase 1: GHZ ingest + Protocol 1 (SPAM)\nPlace GHZ counts CSV at `data/external/ghz_counts.csv`, then run `make reproduce_phase1`.\n
