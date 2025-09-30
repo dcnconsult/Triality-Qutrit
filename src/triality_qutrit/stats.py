@@ -80,3 +80,42 @@ def bootstrap_hotspot(df: pd.DataFrame, value='T2star_ns', x='P_ge_dBm', y='P_ef
     sd_x, sd_y = float(boot_df['peak_P_ge'].std(ddof=1)), float(boot_df['peak_P_ef'].std(ddof=1))
     mu_v, sd_v = float(boot_df['peak_value'].mean()), float(boot_df['peak_value'].std(ddof=1))
     return boot_df, {'concentration_weakweak': conc, 'mu_P_ge': mu_x, 'sd_P_ge': sd_x, 'mu_P_ef': mu_y, 'sd_P_ef': sd_y, 'mu_peak': mu_v, 'sd_peak': sd_v}
+
+
+def symmetry_line_p_test(df: pd.DataFrame, value='T2star_ns', x='P_ge_dBm', y='P_ef_dBm', n_perm: int=1000, random_state: int=0):
+    """Permutation test for asymmetry.
+    Null: data are symmetric under exchanging x and y (no preferred asymmetry).
+    Procedure: randomly swap (x,y) for a random subset of rows per permutation, compute peak's distance to x=y.
+    Returns dict and the permutation distances array.
+    """
+    rng = np.random.default_rng(random_state)
+    # Observed distance
+    obs = symmetry_distance(df, value=value, x=x, y=y)
+    d_obs = abs(obs['sym_dist_db'])
+
+    d_null = np.zeros(n_perm, dtype=float)
+    arr = df[[x, y, value]].values.copy()
+    n = arr.shape[0]
+    for k in range(n_perm):
+        mask = rng.random(n) < 0.5
+        perm = arr.copy()
+        # swap x,y where mask
+        perm[mask, [0,1]] = perm[mask][:, [1,0]]
+        # Build pivot
+        dtemp = pd.DataFrame({x: perm[:,0], y: perm[:,1], value: perm[:,2]})
+        piv = dtemp.pivot_table(index=y, columns=x, values=value, aggfunc='mean')
+        a = piv.values
+        i,j = np.unravel_index(np.nanargmax(a), a.shape)
+        peak_y = float(piv.index[i]); peak_x = float(piv.columns[j])
+        d = abs((peak_x - peak_y)/np.sqrt(2.0))
+        d_null[k] = d
+
+    # One-sided p-value: how often null produces >= observed asymmetry
+    p = ( (d_null >= d_obs).sum() + 1.0 ) / (n_perm + 1.0)
+    return {
+        'p_value': float(p),
+        'd_obs': float(d_obs),
+        'd_null_mean': float(d_null.mean()),
+        'd_null_std': float(d_null.std(ddof=1)),
+        'n_perm': int(n_perm)
+    }, d_null
