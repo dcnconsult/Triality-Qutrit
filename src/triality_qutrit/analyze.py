@@ -1,12 +1,14 @@
 from __future__ import annotations
 import argparse
 from pathlib import Path
-from .io import load_csv, save_csv
-from .plotting import heatmap, side_by_side_heatmap
+import numpy as np
+import pandas as pd
+from .io import load_csv
+from .plotting import heatmap, side_by_side_heatmap, plot_detuning_sweep
 from .stats import spatial_signal_to_noise, hotspot_peak, symmetry_distance, bootstrap_hotspot, symmetry_line_p_test
-from .simulate import synthesize # Import the updated synthesize function
+from .simulate import synthesize
 
-def run_analysis(df: pd.DataFrame, outdir: Path):
+def run_analysis(df: pd.DataFrame, outdir: Path, n_boot=500, n_perm=1000):
     """Runs the full analysis suite on a given dataframe and saves the outputs."""
     outdir.mkdir(parents=True, exist_ok=True)
     heatmap(df, out=outdir / 'heatmap_T2star.png')
@@ -14,15 +16,11 @@ def run_analysis(df: pd.DataFrame, outdir: Path):
     peak = hotspot_peak(df)
     sym = symmetry_distance(df)
 
-    # For now, keep boot/perm low on control runs to speed things up
-    n_boot = 500
-    n_perm = 1000
-    
     boot_df, boot_sum = bootstrap_hotspot(df, n_boot=n_boot, frac=0.8)
     boot_df.to_csv(outdir/'bootstrap_peaks.csv', index=False)
     sym_p, d_null = symmetry_line_p_test(df, n_perm=n_perm)
-    
-    import numpy as _np
+
+    _np = np
     _np.savetxt(outdir/'symmetry_null_dist.csv', d_null, delimiter=',', header='sym_dist_db', comments='')
 
     summary = {
@@ -39,43 +37,52 @@ def run_analysis(df: pd.DataFrame, outdir: Path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--data', required=True, help='CSV path with sweep data')
+    ap.add_argument('--data', help='CSV path with sweep data')
     ap.add_argument('--out', default='out/', help='Output directory')
     ap.add_argument('--run-phase-control', action='store_true', help='Run simulation with phase randomization control.')
+    ap.add_argument('--run-detuning-sweep', action='store_true', help='Run simulation with a pump detuning sweep.')
     args = ap.parse_args()
 
     outdir = Path(args.out)
     outdir.mkdir(parents=True, exist_ok=True)
 
     if args.run_phase_control:
-        # Generate both datasets
+        # Generate and analyze datasets for phase control
         df_hotspot = synthesize(outdir / 'triad_sweep_hotspot.csv', randomize_phases=False)
         df_control = synthesize(outdir / 'triad_sweep_control.csv', randomize_phases=True)
-
-        # Create the side-by-side comparison plot
         side_by_side_heatmap(df_hotspot, df_control, out=outdir / 'Gate4_PhaseRandomization.png',
                              title1='Coherent Phases (Hotspot)', title2='Random Phases (Control)')
-        
-        # Analyze both and write a combined summary
-        summary_hotspot = run_analysis(df_hotspot, outdir / 'hotspot_analysis')
-        summary_control = run_analysis(df_control, outdir / 'control_analysis')
+        summary_hotspot = run_analysis(df_hotspot, outdir / 'hotspot_analysis', n_boot=50, n_perm=100)
+        summary_control = run_analysis(df_control, outdir / 'control_analysis', n_boot=50, n_perm=100)
         
         with open(outdir / 'summary.txt', 'w', encoding='utf-8') as f:
             f.write("--- ANALYSIS OF COHERENT HOTSPOT RUN ---\n")
-            for key, val in summary_hotspot.items():
-                f.write(f"{key}: {val}\n")
-            
+            for key, val in summary_hotspot.items(): f.write(f"{key}: {val}\n")
             f.write("\n--- ANALYSIS OF PHASE-RANDOMIZED CONTROL RUN ---\n")
-            for key, val in summary_control.items():
-                f.write(f"{key}: {val}\n")
+            for key, val in summary_control.items(): f.write(f"{key}: {val}\n")
+
+    elif args.run_detuning_sweep:
+        # Perform the detuning sweep
+        detunings = np.linspace(-10, 10, 21)
+        results = []
+        for detuning in detunings:
+            print(f"Simulating for detuning: {detuning:.1f} MHz")
+            df = synthesize(outdir / f'detuning_{detuning:.1f}MHz.csv', pump_detuning_MHz=detuning)
+            peak = hotspot_peak(df)
+            results.append({'detuning_MHz': detuning, 'peak_T2star_ns': peak['peak_value']})
+        
+        results_df = pd.DataFrame(results)
+        results_df.to_csv(outdir / 'detuning_sweep_results.csv', index=False)
+        plot_detuning_sweep(results_df, out=outdir / 'detuning_response.png')
 
     else:
-        # Run standard analysis on provided data file
+        # Standard analysis on a single file
+        if not args.data:
+            raise ValueError("--data argument is required for standard analysis.")
         df = load_csv(args.data)
         summary = run_analysis(df, outdir / 'analysis')
         with open(outdir / 'summary.txt', 'w', encoding='utf-8') as f:
-            for key, val in summary.items():
-                f.write(f"{key}: {val}\n")
+            for key, val in summary.items(): f.write(f"{key}: {val}\n")
 
     print('Analysis complete. See', outdir)
 

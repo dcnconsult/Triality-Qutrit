@@ -28,3 +28,14 @@ def side_by_side_heatmap(df1: pd.DataFrame, df2: pd.DataFrame, out: str, title1=
     fig.tight_layout()
     fig.savefig(out, dpi=150, bbox_inches='tight')
     return fig
+
+def plot_detuning_sweep(sweep_results: pd.DataFrame, out: str):
+    """Plots the results of a detuning sweep."""
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(sweep_results['detuning_MHz'], sweep_results['peak_T2star_ns'], 'o-')
+    ax.set_xlabel('Pump Detuning [MHz]')
+    ax.set_ylabel('Peak T2* [ns]')
+    ax.set_title('Hotspot Coherence vs. Pump Detuning')
+    ax.grid(True, linestyle=':')
+    fig.savefig(out, dpi=150, bbox_inches='tight')
+    return fig
