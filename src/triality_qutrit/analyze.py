@@ -3,10 +3,12 @@ import argparse
 from pathlib import Path
 from .io import load_csv, save_csv
 from .plotting import heatmap
-from .stats import spatial_signal_to_noise, hotspot_peak
+from .stats import spatial_signal_to_noise, hotspot_peak, symmetry_distance, bootstrap_hotspot
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--n_boot', type=int, default=500)
+    ap.add_argument('--boot_frac', type=float, default=0.8)
     ap.add_argument('--data', required=True, help='CSV path with sweep data')
     ap.add_argument('--out', default='out/', help='Output directory')
     args = ap.parse_args()
@@ -16,9 +18,16 @@ def main():
     heatmap(df, out=outdir/'heatmap_T2star.png')
     stats = spatial_signal_to_noise(df)
     peak = hotspot_peak(df)
+    sym = symmetry_distance(df)
+    boot_df, boot_sum = bootstrap_hotspot(df, n_boot=args.n_boot, frac=args.boot_frac)
+    boot_df.to_csv(outdir/'bootstrap_peaks.csv', index=False)
     with open(outdir/'summary.txt', 'w', encoding='utf-8') as f:
         f.write(f"SNR_Z: {stats['snr_z']:.3f}\nP-value (shuffle): {stats['p_value']:.4f}\n")
         f.write(f"Peak T2*: {peak['peak_value']:.2f} ns at (P_ge={peak['peak_P_ge']:.1f} dBm, P_ef={peak['peak_P_ef']:.1f} dBm)\n")
+        f.write(f"Symmetry-line distance (dB): {sym['sym_dist_db']:.3f}\n")
+        f.write(f"Bootstrap weak-weak concentration: {boot_sum['concentration_weakweak']:.3f}\n")
+        f.write(f"Bootstrap mean peak @ (P_ge={boot_sum['mu_P_ge']:.2f}±{boot_sum['sd_P_ge']:.2f}, P_ef={boot_sum['mu_P_ef']:.2f}±{boot_sum['sd_P_ef']:.2f}) dBm\n")
+        f.write(f"Bootstrap mean peak value: {boot_sum['mu_peak']:.2f}±{boot_sum['sd_peak']:.2f} ns\n")
     print('Analysis complete. See', outdir)
 
 if __name__ == '__main__':
