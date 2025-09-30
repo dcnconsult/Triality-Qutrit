@@ -25,6 +25,36 @@ def main():
     sym_p, d_null = symmetry_line_p_test(df, n_perm=args.n_perm)
     import numpy as _np
     _np.savetxt(outdir/'symmetry_null_dist.csv', d_null, delimiter=',', header='sym_dist_db', comments='')
+
+# Plots: null histogram with observed line, and empirical CDF
+import matplotlib.pyplot as plt
+import numpy as _np
+
+# Histogram
+fig1 = plt.figure(figsize=(7,6))
+plt.hist(d_null, bins=40, density=True)
+plt.axvline(sym_p['d_obs'], linestyle='--')
+plt.xlabel('Symmetry-line distance |d| [dB]')
+plt.ylabel('Density')
+plt.title('Permutation Null: |d| histogram with observed')
+fig1.savefig(outdir/'symmetry_null_hist.png', dpi=150, bbox_inches='tight')
+
+# Empirical CDF
+fig2 = plt.figure(figsize=(7,6))
+xs = _np.sort(d_null)
+ys = _np.arange(1, len(xs)+1)/len(xs)
+plt.plot(xs, ys)
+# Mark observed
+obs = sym_p['d_obs']
+# y at observed
+y_obs = (xs <= obs).sum()/len(xs)
+plt.axvline(obs, linestyle='--')
+plt.axhline(y_obs, linestyle=':')
+plt.xlabel('Symmetry-line distance |d| [dB]')
+plt.ylabel('Empirical CDF')
+plt.title('Permutation Null: CDF with observed marker')
+fig2.savefig(outdir/'symmetry_null_cdf.png', dpi=150, bbox_inches='tight')
+
     with open(outdir/'summary.txt', 'w', encoding='utf-8') as f:
         f.write(f"SNR_Z: {stats['snr_z']:.3f}\nP-value (shuffle): {stats['p_value']:.4f}\n")
         f.write(f"Peak T2*: {peak['peak_value']:.2f} ns at (P_ge={peak['peak_P_ge']:.1f} dBm, P_ef={peak['peak_P_ef']:.1f} dBm)\n")
